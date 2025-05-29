@@ -54,7 +54,7 @@ public class EmployeeControllerTest {
 
         when(employeeService.addEmployee(any(Employee.class))).thenReturn(employee);
 
-        mockMvc.perform(post("/addEmpolyee")  // Double-check your endpoint spelling here
+        mockMvc.perform(post("/addEmpolyee") 
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(employee)))
                 .andExpect(status().isCreated())
@@ -114,7 +114,7 @@ public class EmployeeControllerTest {
                 .andExpect(jsonPath("$[0].employee_name").value("John Doe"))
                 .andExpect(jsonPath("$[0].employee_age").value(30))
                 .andExpect(jsonPath("$[0].employee_salary").value("50000"));
-    }
+    }	
 
     @Test
     public void testGetAllEmployees_NotFound() throws Exception {
@@ -125,6 +125,16 @@ public class EmployeeControllerTest {
                 .andExpect(content().string("No employees found"));
     }
 
+    @Test
+    public void testGetEmployeeById_Exception() throws Exception {
+        // Simulate exception when service is called
+        when(employeeService.getOneEmployee(1)).thenThrow(new RuntimeException("Database connection failed"));
+
+        mockMvc.perform(get("/getOneEmp/1"))
+               .andExpect(status().isInternalServerError())
+               .andExpect(content().string("Error retrieving employee: Database connection failed"));
+    }
+    
     @Test
     public void testGetEmployeeById_Found() throws Exception {
         // Prepare the Employee object
@@ -210,5 +220,61 @@ public class EmployeeControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(content().string("Employee not found with ID: 1"));
     }
+    
+    @Test
+    public void testAddEmployee_Exception() throws Exception {
+        // Prepare a valid Employee object
+        Employee employee = new Employee("John Doe", 30, "50000");
+
+        // Simulate an exception thrown by the service
+        when(employeeService.addEmployee(any(Employee.class)))
+                .thenThrow(new RuntimeException("Database insert failed"));
+
+        // Perform POST request and assert the error response
+        mockMvc.perform(post("/addEmpolyee")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(employee)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("An error occurred while adding the employee: Database insert failed"));
+    }
+
+    @Test
+    public void testGetAllEmployees_Exception() throws Exception {
+        // Simulate an exception thrown by the service layer
+        when(employeeService.getEmployee())
+                .thenThrow(new RuntimeException("Database connection failed"));
+
+        mockMvc.perform(get("/allEmp"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Error fetching employees: Database connection failed"));
+    }
+    
+    @Test
+    public void testDeleteEmployee_Exception() throws Exception {
+        // Simulate an exception thrown by the service layer
+        when(employeeService.deleteEmployeeById(1))
+                .thenThrow(new RuntimeException("Database error while deleting"));
+
+        mockMvc.perform(delete("/deleteEmp/1"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Error deleting employee: Database error while deleting"));
+    }
+    
+    @Test
+    public void testUpdateEmployeePartially_Exception() throws Exception {
+        Employee partialUpdate = new Employee();
+        partialUpdate.setEmployee_Name("Updated Name");
+
+        // Simulate exception thrown by service during getOneEmployee
+        when(employeeService.getOneEmployee(1)).thenThrow(new RuntimeException("Service failure"));
+
+        mockMvc.perform(patch("/updateEmp/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(partialUpdate)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Error updating employee: Service failure"));
+    }
+
+
 }
 
